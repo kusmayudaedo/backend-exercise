@@ -1,0 +1,16 @@
+[
+    {
+        "id": 1,
+        "uuid": "uuid01nsjjnbasjdhasjn",
+        "name": "admin",
+        "email": "admin@example.com",
+        "role": "administrator"
+    },
+    {
+        "id": 2,
+        "uuid": "357f8af8-7f94-4079-9c08-5afeaefbab26",
+        "role": "user",
+        "name": "edo",
+        "email": "edo@example.com"
+    }
+]
