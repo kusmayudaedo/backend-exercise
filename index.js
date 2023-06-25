@@ -5,6 +5,8 @@ import bodyParser from "body-parser";
 import dotenv from "dotenv";
 import fs from "fs";
 import { uuid } from "uuidv4";
+import requestLogger from "./src/middleware/logger.js";
+import apiKeyValidator from "./src/middleware/api.key.validator.js";
 
 dotenv.config();
 
@@ -18,12 +20,13 @@ Convert the body into JSON and send it to request.body so it can be used to hand
 */
 //Apply the body parser globally
 app.use(bodyParser.json());
+app.use(requestLogger);
 
 //@Handle Get data user
-app.get("/api/v1/users", (request, response) => {
+app.get("/api/v1/users", apiKeyValidator, (request, response) => {
   try {
     //@Read data from JSON file
-    const users = JSON.parse(fs.readFileSync("users.json", "utf8"));
+    const users = JSON.parse(fs.readFileSync("./json/users.json", "utf8"));
     //send response to client
     response.status(200).json(users);
   } catch (error) {
@@ -32,111 +35,30 @@ app.get("/api/v1/users", (request, response) => {
   }
 });
 
-//@handle POST
-app.post("/api/v1/users", (request, response) => {
+//@handle api key request
+app.post("/api/request-api-key", (request, response) => {
   try {
-    //@read the data from body
-    const body = request.body;
+    //@generate api key using UUID
+    const apiKey = uuid();
 
-    //@read data from JSON file
-    const users = JSON.parse(fs.readFileSync("users.json", "utf-8"));
+    //@read the file form api.keys.json
+    const apiKeys = JSON.parse(fs.readFileSync("./json/api.keys.json", "utf8"));
 
-    const newUsers = {
-      id: users.length + 1,
-      uuid: uuid(),
-      role: "user",
-      ...body,
-    };
-    //@add data to file
-    users.push(newUsers);
+    //@save API keys data
+    apiKeys.push({
+      key: apiKey,
+      name: request.body.name,
+      email: request.body.email,
+    });
 
-    //@Write data to file
-    fs.writeFileSync("users.json", JSON.stringify(users, null, 2));
+    //@write the api keys
+    fs.writeFileSync("./json/api.keys.json", JSON.stringify(apiKeys));
 
-    //@send response
-    response.status(201).json({ message: "Success", users: newUsers });
+    //@send response to client
+    response.status(201).json({ key: apiKey });
   } catch (error) {
     console.error(error);
     response.status(500).json("Server error");
-  }
-});
-
-//@Handle get users by uuid
-app.get("/api/v1/users/:uuid", (request, response) => {
-  try {
-    //@read data from json file
-    const users = JSON.parse(fs.readFileSync("users.json", "utf8"));
-
-    //find user by uuid
-    const user = users.find((user) => user.uuid === request.params.uuid);
-
-    //check if user exists
-    if (!user) {
-      response.status(404).json({ message: "User not found" });
-    } else {
-      response.status(200).json({ user });
-    }
-  } catch (error) {
-    console.error(error);
-    response.status(500).json("Server error");
-  }
-});
-
-//@Update user by uuid
-app.put("/api/v1/users/:uuid", (request, response) => {
-  try {
-    //@read body
-    const body = request.body;
-
-    //@read data from file
-    const users = JSON.parse(fs.readFileSync("users.json", "utf-8"));
-
-    const user = users.find((user) => user.uuid === request.params.uuid);
-
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    user.name = body.name;
-    user.email = body.email;
-
-    fs.writeFileSync("users.json", JSON.stringify(users, null, 2));
-
-    response
-      .status(200)
-      .json({ message: "User updated successfully", user: user });
-  } catch (error) {
-    console.error(error);
-    response.status(500).json("Server error");
-  }
-});
-
-//@Handle DELETE
-
-app.delete("/api/v1/users/:uuid", (request, response) => {
-  try {
-    // @read users from json file
-    const users = JSON.parse(fs.readFileSync("users.json", "utf-8"));
-
-    // @get user
-    const user = users.find((user) => user.uuid === request.params.uuid);
-
-    // @if user not found
-    if (!user) {
-      return response.status(404).json({ message: "User not found" });
-    }
-
-    // @delete user
-    users.splice(users.indexOf(user), 1);
-
-    // @write users to json file
-    fs.writeFileSync("users.json", JSON.stringify(users, null, 4));
-
-    // @send response to client
-    response.status(200).json({ message: "User deleted successfully" });
-  } catch (error) {
-    console.error(error);
-    response.status(500).json({ message: "Server Error" });
   }
 });
 
